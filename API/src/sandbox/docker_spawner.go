@@ -33,6 +33,7 @@ func DefaultSandboxOptions() SandboxOptions {
 		tmp = "/tmp"
 	}
 
+	// TODO (cw|3.9.18) get vm_name from environment variable in .env file
 	return SandboxOptions{tmp, pwd, "virtual_machine", time.Second * 5}
 }
 

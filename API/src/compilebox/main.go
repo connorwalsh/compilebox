@@ -31,7 +31,7 @@ type ExecutionResult struct {
 var box sandbox.Interface
 
 func main() {
-	port := getEnv("COMPILEBOX_PORT", "31337")
+	port := getEnv("COMPILEBOX_API_SERVER_PORT", "31337")
 
 	box = sandbox.New("data/compilers.json")
 

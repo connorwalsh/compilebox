@@ -32,7 +32,8 @@ WORKDIR /bin/
 # copy over single binary from build stage --^
 COPY --from=server /go/bin/compilebox .
 
-EXPOSE 6666
+# copy compilers data
+COPY ./API/data/compilers.json ./data/compilers.json
 
 # run comilebox API server
 CMD ["compilebox"]
