@@ -1,39 +1,64 @@
-FROM golang:1.9-alpine as server
+############################################################
+# Dockerfile to build sandbox for executing user code
+# Based on Ubuntu
+############################################################
 
-# GOPATH = /go in the golang image
-# also $GOPATH/bin has been added to path
+FROM chug/ubuntu14.04x64 
+MAINTAINER ASAD MEMON, OSMAN ALI
 
-WORKDIR /go/src/
+# Update the repository sources list
+RUN echo "deb http://archive.ubuntu.com/ubuntu trusty main universe" > /etc/apt/sources.list
+RUN apt-get update
+#RUN apt-get upgrade
+#Install all the languages/compilers we are supporting.
+RUN apt-get install -y gcc
+RUN apt-get install -y g++
+#RUN apt-get install -y php5-cli
+RUN apt-get install -y ruby
+RUN apt-get install -y python
+RUN apt-get install -y mono-xsp2 mono-xsp2-base
 
-# copy API server src to be compiled
-COPY API/ ./
+RUN apt-get install -y mono-vbnc
+RUN apt-get install -y npm
+RUN apt-get install -y golang-go	
+RUN apt-get install -y nodejs
 
-# currently, we need to install several dependencies
-# note that we must install Docker, but when we run the container, we must
-# mount the /var/run/docker.sock of the host onto the container so the host
-# docker daemon spins up sibling containers (as opposed to Docker in Docker)
-#
-# TODO (cw|3.9.18) once we remove the dependency on gb, we will only need to
-# install docker here.
-RUN apk update && \
-    apk add --no-cache git && \
-    go get github.com/constabulary/gb/... && \
-    apk del git && \
-    apk add docker
+RUN npm install -g underscore request express jade shelljs passport http sys jquery lodash async mocha moment connect validator restify ejs ws co when helmet wrench brain mustache should backbone forever  debug get-stdin
 
-# compile and install server binary within container
-RUN gb build && \
-    mv ./bin/compilebox /go/bin
+ENV NODE_PATH /usr/local/lib/node_modules/
 
-FROM alpine
+RUN apt-get install -y clojure1.4
 
-WORKDIR /bin/
 
-# copy over single binary from build stage --^
-COPY --from=server /go/bin/compilebox .
+#prepare for Java download
+RUN apt-get install -y python-software-properties
+RUN apt-get install -y software-properties-common
 
-# copy compilers data
-COPY ./API/data/compilers.json ./data/compilers.json
+#grab oracle java (auto accept licence)
+RUN add-apt-repository -y ppa:webupd8team/java
+RUN apt-get update
+RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
+RUN apt-get install -y oracle-java8-installer
 
-# run comilebox API server
-CMD ["compilebox"]
+
+RUN apt-get install -y gobjc
+RUN apt-get install -y gnustep-devel &&  sed -i 's/#define BASE_NATIVE_OBJC_EXCEPTIONS     1/#define BASE_NATIVE_OBJC_EXCEPTIONS     0/g' /usr/include/GNUstep/GNUstepBase/GSConfig.h
+
+
+#RUN apt-get install -y scala
+RUN useradd -m mysql 
+RUN apt-get install -y mysql-server
+RUN apt-get install -y perl
+
+RUN apt-get install -y curl
+#RUN mkdir -p /opt/rust && \
+#    curl https://sh.rustup.rs -sSf | HOME=/opt/rust sh -s -- --no-modify-path -y && \
+#    chmod -R 777 /opt/rust
+
+RUN apt-get install -y sudo
+RUN apt-get install -y bc
+
+RUN echo "mysql ALL = NOPASSWD: /usr/sbin/service mysql start" | cat >> /etc/sudoers
+
+# install stack for haskell
+RUN apt-get install -y haskell-platform
