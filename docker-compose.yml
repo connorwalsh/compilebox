@@ -3,6 +3,7 @@ services:
   compilebox_api_server:
     build:
       context: .
+      dockerfile: Dockerfile-server
     env_file: .env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # use host Docker daemon
@@ -13,5 +14,6 @@ services:
   compilebox:
     env_file: .env
     build:
-      context: ./Setup/
+      context: .
+      dockerfile: Dockerfile-vm
     command: echo "compilebox build complete"
