@@ -7,6 +7,7 @@ services:
     env_file: .env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # use host Docker daemon
+      - "results:${COMPILEBOX_RESULTS_DIR}"
     ports:
       - "${COMPILEBOX_API_SERVER_PORT}:${COMPILEBOX_API_SERVER_PORT}"
     depends_on:
@@ -17,3 +18,7 @@ services:
       context: .
       dockerfile: Dockerfile-vm
     command: echo "compilebox build complete"
+    volumes:
+      - "results:${COMPILEBOX_RESULTS_DIR}"
+volumes:
+  results:

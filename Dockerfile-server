@@ -1,3 +1,4 @@
+# --- multi-stage build 1/2: build api server from src ---
 FROM golang:1.9-alpine as server
 
 # GOPATH = /go in the golang image
@@ -11,6 +12,7 @@ COPY . .
 # compile and install server binary within container
 RUN go install ./cmd/compilebox
 
+# --- multi-stage build 2/2: install binaries onto clean image ---
 FROM alpine
 
 WORKDIR /bin/
@@ -21,8 +23,11 @@ WORKDIR /bin/
 RUN apk update && \
     apk add docker
 
-# copy over single binary from build stage --^
+# copy over single binary and supporting scripts from build stage --^
+# TODO once compilebox uses the Docker native API we most likely won't need these supporting scritps
 COPY --from=server /go/bin/compilebox .
+COPY --from=server /go/src/github.com/frenata/compilebox/Payload ./Payload
+COPY --from=server /go/src/github.com/frenata/compilebox/DockerTimeout.sh .
 
 # copy compilers data
 COPY ./data/compilers.json ./data/compilers.json

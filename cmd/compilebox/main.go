@@ -3,10 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/frenata/compilebox"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/frenata/compilebox"
 )
 
 type CodeSubmission struct {
@@ -24,6 +25,10 @@ type ExecutionResult struct {
 	Message compilebox.Message `json:"message"`
 }
 
+const (
+	CompilersFile = "data/compilers.json"
+)
+
 // type LanguagesResponse struct {
 // 	Languages map[string]compilebox.Language `json:"languages"`
 // }
@@ -31,9 +36,19 @@ type ExecutionResult struct {
 var box compilebox.Interface
 
 func main() {
+	var (
+		err error
+	)
+
+	// on spinup, run a smoke test against the compilebox Docker container
+	err = runSmokeTest()
+	if err != nil {
+		panic(err)
+	}
+
 	port := getEnv("COMPILEBOX_API_SERVER_PORT", "31337")
 
-	box = compilebox.New("data/compilers.json")
+	box = compilebox.New(CompilersFile)
 
 	http.HandleFunc("/languages/", getLangs)
 	http.HandleFunc("/eval/", evalCode)
@@ -103,4 +118,62 @@ func getLangs(w http.ResponseWriter, r *http.Request) {
 	// write working language list back to client
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(buf)
+}
+
+// executes a hello world program for all supported languages inside the compilerbox
+// Docker container.
+func runSmokeTest() error {
+	testBox := compilebox.New(CompilersFile)
+
+	// currently passing:
+	compilerTests := make(map[string]string)
+	compilerTests["C++"] = "#include <iostream>\nusing namespace std;\n\nint main() {\n\tcout<<\"Hello\";\n\treturn 0;\n}"
+	compilerTests["Java"] = "\n\nimport java.io.*;\n\nclass myCode\n{\n\tpublic static void main (String[] args) throws java.lang.Exception\n\t{\n\t\t\n\t\tSystem.out.println(\"Hello\");\n\t}\n}"
+	compilerTests["C#"] = "using System;\n\npublic class Challenge\n{\n\tpublic static void Main()\n\t{\n\t\t\tConsole.WriteLine(\"Hello\");\n\t}\n}"
+	compilerTests["Clojure"] = "(println \"Hello\")"
+	compilerTests["Perl"] = "use strict;\nuse warnings\n;use v5.14; say 'Hello';"
+	compilerTests["Golang"] = "package main\nimport \"fmt\"\n\nfunc main(){\n  \n\tfmt.Printf(\"Hello\")\n}"
+	compilerTests["JavaScript"] = "console.log(\"Hello\");"
+	compilerTests["Python"] = "print(\"Hello\")"
+	compilerTests["Ruby"] = "puts \"Hello\""
+	compilerTests["Bash"] = "echo 'Hello' "
+	compilerTests["PHP"] = "<?php\n$ho = fopen('php://stdout', \"w\");\n\nfwrite($ho, \"Hello\");\n\n\nfclose($ho);\n"
+
+	// currently broken:
+	// Haskell ghc missing, maybe need to rebuild docker file
+	// compilerTests["Haskell"] = "module Main where\nmain = putStrLn \"Hello\""
+	//
+	// Scala: don't understand the error this generates
+	// compilerTests["Scala"] = "object HelloWorld {def main(args: Array[String]) = println(\"Hello\")}"
+	//
+	// Rust seems to be missing and there's a problem setting environment variables
+	// compilerTests["Rust"] = "fn main() {\n\tprintln!(\"Hello\");\n}"
+
+	stdin := ""
+	expected := "Hello"
+	langResults := make(map[string]string)
+
+	// run tests for each language
+	for lang, code := range compilerTests {
+		stdouts, msg := testBox.EvalWithStdins(lang, code, []string{stdin})
+
+		log.Println(stdouts[0], msg)
+
+		if stdouts[0] == expected {
+			log.Printf("%s passed 'Hello' test.", lang)
+			langResults[lang] = "Pass"
+		} else {
+			log.Println(stdouts)
+			log.Printf("%s failed 'Hello' test.", lang)
+			langResults[lang] = "Fail"
+		}
+
+		fmt.Println("-----------------------------------------------------")
+	}
+
+	for lang, result := range langResults {
+		fmt.Printf("%s -> %s\n", lang, result)
+	}
+
+	return nil
 }
